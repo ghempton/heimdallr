@@ -40,6 +40,7 @@ def run_specs(user_model, article_model, dont_save_model)
 
   it "should handle list of fields to view" do
     article = article_model.create! :owner_id => @john.id, :content => 'test', :secrecy_level => 0
+    puts article.attributes
     expect { article.restrict(@looser).secrecy_level }.to raise_error
     expect { article.restrict(@admin).secrecy_level }.to_not raise_error
     expect { article.restrict(@john).secrecy_level }.to_not raise_error

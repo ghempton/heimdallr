@@ -18,7 +18,23 @@ module Heimdallr
     extend ActiveSupport::Concern
 
     included do
+      # @api private
+      #
+      # An internal attribute to store the restrictions block
       class_attribute :heimdallr_restrictions, :instance_writer => false
+
+      # @api private
+      #
+      # An internal attribute to store the list of user-defined name scopes.
+      # It is required because ActiveRecord does not provide any introspection for
+      # named scopes.
+      class_attribute :heimdallr_scopes, :instance_writer => false
+
+      # @api private
+      #
+      # An internal attribute to store the list of user-defined relation-like methods
+      # which return ActiveRecord family objects and can be automatically restricted.
+      class_attribute :heimdallr_relations, :instance_writer => false
     end
 
     # Class methods for {Heimdallr::Model}. See also +ActiveSupport::Concern+.
@@ -38,7 +54,7 @@ module Heimdallr
       #   @return [Proxy::Collection]
       def restrict(context=nil, options={}, &block)
         if block
-          self.heimdallr_restrictions = Evaluator.new(self, block)
+          self.heimdallr_restrictions = block
         else
           Proxy::Collection.new(context, restrictions(context).request_scope(:fetch, self), options)
         end
@@ -48,15 +64,8 @@ module Heimdallr
       #
       # @return [Evaluator]
       def restrictions(context, record=nil)
-        heimdallr_restrictions.evaluate(context, record)
+        Evaluator.new(self, self.heimdallr_restrictions).evaluate(context, record)
       end
-
-      # @api private
-      #
-      # An internal attribute to store the list of user-defined name scopes.
-      # It is required because ActiveRecord does not provide any introspection for
-      # named scopes.
-      attr_accessor :heimdallr_scopes
 
       # An interceptor for named scopes which adds them to {#heimdallr_scopes} list.
       def scope(name, *args)
@@ -65,12 +74,6 @@ module Heimdallr
 
         super
       end
-
-      # @api private
-      #
-      # An internal attribute to store the list of user-defined relation-like methods
-      # which return ActiveRecord family objects and can be automatically restricted.
-      attr_accessor :heimdallr_relations
 
       # A DSL method for defining relation-like methods.
       def heimdallr_relation(*methods)
